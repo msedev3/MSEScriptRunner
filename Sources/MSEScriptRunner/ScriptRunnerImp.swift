@@ -8,7 +8,7 @@ public class ScriptRunnerImp: ScriptRunner {
     private let normalRunner: ScriptRunnerNormal
     private let rootRunner: ScriptRunnerRoot
     
-    init(password: String? = nil) {
+    public init(password: String? = nil) {
         self.password = password
         self.normalRunner = ScriptRunnerNormalImp()
         self.rootRunner = ScriptRunnerRootImp()
