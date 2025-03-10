@@ -7,70 +7,61 @@
 
 import Foundation
 
-public class ScriptRunnerNormalImp: ScriptRunnerNormal {
+/// Implementation of the `ScriptRunnerNormal` protocol.
+internal class ScriptRunnerNormalImp: ScriptRunnerNormal {
     
-    public func getCurrentLoggedInUsername() async -> String? {
-        let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "stat -f%Su /dev/console"]
-
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        try? task.run()//launch()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-
-        if let username = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .newlines) {
-            return username.trim()
-        }
-
-        return nil
+    /// Retrieves the currently logged-in username.
+    internal func getCurrentLoggedInUsername() async -> String? {
+        return NSUserName() // Returns the username of the currently logged-in user.
     }
     
-    public func excecuteCommand(input: String) async -> ScriptResponse {
+    /// Executes a normal command and returns the result.
+    internal func excecuteCommand(input: String) async -> ScriptResponse {
         let task = Process()
         let outputPipe = Pipe()
         
-        // execute the command
+        // Configure the process to execute the command.
+        task.launchPath = "/usr/bin/env" // Use `/usr/bin/env` to ensure compatibility.
+        task.arguments = ["/bin/bash", "-c", input] // Pass the command as an argument to bash.
+        task.standardOutput = outputPipe // Capture the standard output.
         
-        task.launchPath = "/usr/bin/env"
-        task.arguments = ["/bin/bash", "-c", input]
-        
-        task.standardOutput = outputPipe
+        // Launch the process and capture the output.
         task.launch()
         let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: outputData, encoding: String.Encoding.utf8) else {
+        guard let output = String(data: outputData, encoding: .utf8) else {
             print("An error occurred while casting the command output to a string")
-            return (nil, task.terminationStatus)
+            return ScriptResponse(exitCode: task.terminationStatus)
         }
         
-        task.waitUntilExit()
-        
-        return (output, task.terminationStatus)
+        task.waitUntilExit() // Wait for the process to complete.
+        return ScriptResponse(output: output, exitCode: task.terminationStatus)
     }
     
-    func runScriptWithOutSudoWithUsername(input: String, userName: String) async -> ScriptResponse{
+    /// Executes a command as a specific user without sudo.
+    internal func runScriptWithOutSudoWithUsername(input: String, userName: String) async -> ScriptResponse {
         let task = Process()
         let stdOut = Pipe()
         let stdIn = Pipe()
+        
+        // Configure the process to execute the command as the specified user.
         task.launchPath = "/usr/bin/sudo"
         task.standardOutput = stdOut
         task.standardError = stdOut
         task.standardInput = stdIn
         task.arguments = ["-u", userName, "/bin/bash", "-c", "-l", input]
         
-        try? task.run()
+        try? task.run() // Run the process.
         
+        // Capture the output.
         let outputData = stdOut.fileHandleForReading.readDataToEndOfFile()
-        var output = String(data: outputData, encoding: String.Encoding.utf8)
+        var output = String(data: outputData, encoding: .utf8)
         print("actual output is ", output ?? "")
         if let outputTemp = output {
-            output = outputTemp.deletingPrefix("Password:")
+            output = outputTemp.deletingPrefix("Password:") // Remove the "Password:" prefix from the output.
         }
         task.waitUntilExit()
         print("status code is \(task.terminationStatus)")
         print("result is ", output ?? "")
-        return (output?.trim(), task.terminationStatus)
+        return ScriptResponse(output: output?.trim(), exitCode: task.terminationStatus)
     }
 }
