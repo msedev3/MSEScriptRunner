@@ -36,9 +36,9 @@ A Swift library for executing terminal commands (normal and sudo) on macOS with 
 ---
 
 ## Requirements
-- **macOS**: 10.15+ (due to `Process` API usage)
+- **macOS**: 12+ (due to `Process` API usage)
 - **Swift**: 5.5+
-- **Xcode**: 12.0+
+- **Xcode**: 15.0+
 
 ---
 
